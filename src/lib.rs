@@ -35,22 +35,21 @@ impl Config {
 
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     match config.command {
-        Command::CreateTodo => create_todo(&config.target),
-        _ => (),
+        Command::CreateTodo => {
+            create_todo(&config.target)?;
+            Ok(())
+        }
+        _ => Ok(()),
     }
-
-    Ok(())
 }
 
-fn create_todo(todo: &str) {
+fn create_todo(todo: &str) -> Result<(), std::io::Error> {
     let mut file = OpenOptions::new()
         .create(true)
         .append(true)
         .open("todo.txt")
         .unwrap();
 
-    if let Err(e) = writeln!(file, "{}", todo) {
-        eprintln!("Could not write: '{}' to file: {}", todo, "todo.txt");
-        eprintln!("{}", e);
-    }
+    writeln!(file, "{}", todo)?;
+    Ok(())
 }
