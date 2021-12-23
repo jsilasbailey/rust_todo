@@ -28,7 +28,8 @@ impl Config {
         };
 
         let command = match command.as_str() {
-            "c" => Command::CreateTodo,
+            "a" => Command::CreateTodo,
+            "add" => Command::CreateTodo,
             _ => Command::Unsupported,
         };
 
