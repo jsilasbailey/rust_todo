@@ -17,15 +17,8 @@ impl Config {
     pub fn from_args(mut args: env::Args) -> Result<Config, &'static str> {
         args.next();
 
-        let command = match args.next() {
-            Some(arg) => arg,
-            None => return Err("Please specify a command!"),
-        };
-
-        let target = match args.next() {
-            Some(arg) => arg,
-            None => return Err("Please specify a target!"),
-        };
+        let command = args.next().ok_or("Please specify a command!")?;
+        let target = args.next().ok_or("Please specify a target!")?;
 
         let command = match command.as_str() {
             "a" => Command::CreateTodo,
