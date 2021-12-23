@@ -1,3 +1,4 @@
+use std::env;
 use std::error::Error;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
@@ -13,13 +14,18 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn from_args(args: &[String]) -> Result<Config, &str> {
-        if args.len() < 3 {
-            return Err("Not enough arguments");
-        }
+    pub fn from_args(mut args: env::Args) -> Result<Config, &'static str> {
+        args.next();
 
-        let command = args[1].clone();
-        let target = args[2].clone();
+        let command = match args.next() {
+            Some(arg) => arg,
+            None => return Err("Please specify a command!"),
+        };
+
+        let target = match args.next() {
+            Some(arg) => arg,
+            None => return Err("Please specify a target!"),
+        };
 
         let command = match command.as_str() {
             "c" => Command::CreateTodo,
