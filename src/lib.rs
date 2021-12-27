@@ -47,9 +47,9 @@ fn create_todo(todo: &str) -> Result<(), std::io::Error> {
     let mut file = OpenOptions::new()
         .create(true)
         .append(true)
-        .open("todo.txt")
-        .unwrap();
+        .open("todo.txt")?;
 
     writeln!(file, "{}", todo)?;
+
     Ok(())
 }
