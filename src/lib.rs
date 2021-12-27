@@ -1,5 +1,4 @@
 use std::env;
-use std::error::Error;
 use std::fs::OpenOptions;
 use std::io::prelude::*;
 
@@ -26,20 +25,14 @@ impl Config {
             _ => Command::Unsupported,
         };
 
-        match command {
-            Command::Unsupported => Err("Unsupported command!"),
-            _ => Ok(Config { command, target }),
-        }
+        Ok(Config { command, target })
     }
 }
 
-pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
+pub fn run(config: Config) -> Result<(), String> {
     match config.command {
-        Command::CreateTodo => {
-            create_todo(&config.target)?;
-            Ok(())
-        }
-        _ => Ok(()),
+        Command::CreateTodo => create_todo(&config.target).or_else(|err| Err(err.to_string())),
+        Command::Unsupported => Err(String::from("Unsupported command!")),
     }
 }
 
