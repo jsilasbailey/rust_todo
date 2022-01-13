@@ -1,9 +1,11 @@
+use chrono;
 use std::env;
-use std::fs::OpenOptions;
+use std::fs::{self, OpenOptions};
 use std::io::prelude::*;
 
 pub enum Command {
     CreateTodo,
+    DoTodo,
     ListTodos,
     Unsupported,
 }
@@ -21,6 +23,7 @@ impl Config {
         let command = match command.as_str() {
             "a" => Command::CreateTodo,
             "add" => Command::CreateTodo,
+            "do" => Command::DoTodo,
             "l" => Command::ListTodos,
             "list" => Command::ListTodos,
             _ => Command::Unsupported,
@@ -28,6 +31,10 @@ impl Config {
 
         match command {
             Command::CreateTodo => {
+                let target = args.next().ok_or("Please specify a target!")?;
+                Ok(Config { command, target })
+            }
+            Command::DoTodo => {
                 let target = args.next().ok_or("Please specify a target!")?;
                 Ok(Config { command, target })
             }
@@ -46,6 +53,14 @@ impl Config {
 pub fn run(config: Config) -> Result<(), String> {
     match config.command {
         Command::CreateTodo => create_todo(&config.target).or_else(|err| Err(err.to_string())),
+        Command::DoTodo => {
+            let parse_result = config.target.parse::<usize>();
+
+            match parse_result {
+                Ok(todo_number) => complete_todo(todo_number).or_else(|err| Err(err.to_string())),
+                Err(_) => Err(format!("Could not find todo number {}!", config.target)),
+            }
+        }
         Command::ListTodos => list_todos().or_else(|err| Err(err.to_string())),
         Command::Unsupported => Err(String::from("Unsupported command!")),
     }
@@ -84,4 +99,26 @@ fn list_todos() -> Result<(), std::io::Error> {
             _ => Err(error),
         },
     }
+}
+
+fn complete_todo(todo_number: usize) -> Result<(), std::io::Error> {
+    let todos = fs::read_to_string("todo.txt")?;
+    let mut todos_file = OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .open("todo.txt")?;
+    let mut done_file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("done.txt")?;
+
+    for (index, line) in todos.lines().enumerate() {
+        if (index + 1) == todo_number {
+            writeln!(done_file, "x {:?} {}", chrono::offset::Utc::now(), line)?;
+        } else {
+            writeln!(todos_file, "{}", line)?;
+        }
+    }
+
+    Ok(())
 }
