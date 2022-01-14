@@ -52,17 +52,26 @@ impl Config {
 
 pub fn run(config: Config) -> Result<(), String> {
     match config.command {
-        Command::CreateTodo => create_todo(&config.target).or_else(|err| Err(err.to_string())),
+        Command::CreateTodo => create_todo(&config.target).or_else(handle_io_err),
         Command::DoTodo => {
             let parse_result = config.target.parse::<usize>();
 
             match parse_result {
-                Ok(todo_number) => complete_todo(todo_number).or_else(|err| Err(err.to_string())),
+                Ok(todo_number) => complete_todo(todo_number).or_else(handle_io_err),
                 Err(_) => Err(format!("Could not find todo number {}!", config.target)),
             }
         }
         Command::ListTodos => list_todos().or_else(|err| Err(err.to_string())),
         Command::Unsupported => Err(String::from("Unsupported command!")),
+    }
+}
+
+fn handle_io_err(err: std::io::Error) -> Result<(), String> {
+    match err.kind() {
+        std::io::ErrorKind::NotFound => Err(String::from(
+            "todo.txt file not present. Try creating some todos!",
+        )),
+        _ => Err(err.to_string()),
     }
 }
 
@@ -78,27 +87,13 @@ fn create_todo(todo: &str) -> Result<(), std::io::Error> {
 }
 
 fn list_todos() -> Result<(), std::io::Error> {
-    let file = OpenOptions::new().read(true).open("todo.txt");
+    let file = OpenOptions::new().read(true).open("todo.txt")?;
 
-    match file {
-        Ok(file) => {
-            for (index, line) in std::io::BufReader::new(file).lines().enumerate() {
-                if let Ok(todo_line) = line {
-                    println!("{} {}", index + 1, todo_line);
-                }
-            }
-
-            Ok(())
-        }
-        Err(error) => match error.kind() {
-            std::io::ErrorKind::NotFound => {
-                println!("No todo.txt file yet!");
-
-                Ok(())
-            }
-            _ => Err(error),
-        },
+    for (index, line) in std::io::BufReader::new(file).lines().enumerate() {
+        println!("{} {}", index + 1, line.unwrap());
     }
+
+    Ok(())
 }
 
 fn complete_todo(todo_number: usize) -> Result<(), std::io::Error> {

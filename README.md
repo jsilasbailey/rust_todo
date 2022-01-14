@@ -8,7 +8,7 @@ Simple todo.txt implementation in Rust
 - [x] Completing todos
 - [ ] Listing completed todos
 - [ ] Better output, e.g. printing the list of todos after actions
-- [ ] Consolidate stdio error handling, e.g. todo.txt file doesn't exist
+- [x] Consolidate stdio error handling, e.g. todo.txt file doesn't exist
 - [ ] Configurable, e.g. todo.txt location
 - [ ] Documentation
 
