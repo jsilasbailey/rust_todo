@@ -61,7 +61,7 @@ pub fn run(config: Config) -> Result<(), String> {
                 Err(_) => Err(format!("Could not find todo number {}!", config.target)),
             }
         }
-        Command::ListTodos => list_todos().or_else(|err| Err(err.to_string())),
+        Command::ListTodos => list_todos().or_else(handle_io_err),
         Command::Unsupported => Err(String::from("Unsupported command!")),
     }
 }
