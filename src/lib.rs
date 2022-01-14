@@ -2,11 +2,13 @@ use chrono;
 use std::env;
 use std::fs::{self, OpenOptions};
 use std::io::prelude::*;
+use std::io::{BufReader, ErrorKind};
 
 pub enum Command {
     CreateTodo,
     DoTodo,
     ListTodos,
+    ListAllTodos,
     Unsupported,
 }
 
@@ -26,6 +28,7 @@ impl Config {
             "do" => Command::DoTodo,
             "ls" => Command::ListTodos,
             "list" => Command::ListTodos,
+            "listall" => Command::ListAllTodos,
             _ => Command::Unsupported,
         };
 
@@ -39,6 +42,10 @@ impl Config {
                 Ok(Config { command, target })
             }
             Command::ListTodos => Ok(Config {
+                command,
+                target: String::from("todo.txt"),
+            }),
+            Command::ListAllTodos => Ok(Config {
                 command,
                 target: String::from("todo.txt"),
             }),
@@ -62,6 +69,10 @@ pub fn run(config: Config) -> Result<(), String> {
             }
         }
         Command::ListTodos => list_todos().or_else(handle_io_err),
+        Command::ListAllTodos => match list_todos().or_else(handle_io_err) {
+            Ok(_) => list_done_todos().or_else(handle_io_err),
+            Err(err) => Err(err),
+        },
         Command::Unsupported => Err(String::from("Unsupported command!")),
     }
 }
@@ -87,13 +98,45 @@ fn create_todo(todo: &str) -> Result<(), std::io::Error> {
 }
 
 fn list_todos() -> Result<(), std::io::Error> {
-    let file = OpenOptions::new().read(true).open("todo.txt")?;
+    let file = OpenOptions::new().read(true).open("todo.txt");
 
-    for (index, line) in std::io::BufReader::new(file).lines().enumerate() {
-        println!("{} {}", index + 1, line.unwrap());
+    match file {
+        Ok(handle) => {
+            for (index, line) in BufReader::new(handle).lines().enumerate() {
+                println!("{} {}", index + 1, line.unwrap());
+            }
+
+            Ok(())
+        }
+        Err(err) => {
+            if err.kind() == ErrorKind::NotFound {
+                Ok(()) // None to list
+            } else {
+                Err(err)
+            }
+        }
     }
+}
 
-    Ok(())
+fn list_done_todos() -> Result<(), std::io::Error> {
+    let file = OpenOptions::new().read(true).open("done.txt");
+
+    match file {
+        Ok(handle) => {
+            for line in BufReader::new(handle).lines() {
+                println!("{} {}", 0, line.unwrap());
+            }
+
+            Ok(())
+        }
+        Err(err) => {
+            if err.kind() == ErrorKind::NotFound {
+                Ok(()) // None to list
+            } else {
+                Err(err)
+            }
+        }
+    }
 }
 
 fn complete_todo(todo_number: usize) -> Result<(), std::io::Error> {
