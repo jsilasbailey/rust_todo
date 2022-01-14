@@ -24,7 +24,7 @@ impl Config {
             "a" => Command::CreateTodo,
             "add" => Command::CreateTodo,
             "do" => Command::DoTodo,
-            "l" => Command::ListTodos,
+            "ls" => Command::ListTodos,
             "list" => Command::ListTodos,
             _ => Command::Unsupported,
         };
