@@ -33,10 +33,10 @@ impl Config {
         };
 
         match command {
-            Command::CreateTodo => {
-                let target = args.next().ok_or("Please specify a target!")?;
-                Ok(Config { command, target })
-            }
+            Command::CreateTodo => Ok(Config {
+                command,
+                target: parse_remaining_args(args).ok_or("Please specify text for a todo!")?,
+            }),
             Command::DoTodo => {
                 let target = args.next().ok_or("Please specify a target!")?;
                 Ok(Config { command, target })
@@ -74,6 +74,18 @@ pub fn run(config: Config) -> Result<(), String> {
             Err(err) => Err(err),
         },
         Command::Unsupported => Err(String::from("Unsupported command!")),
+    }
+}
+
+fn parse_remaining_args(args: env::Args) -> Option<String> {
+    let target = args.reduce(|mut accum, word| {
+        accum.push_str(&format!("{} ", &word));
+        accum
+    });
+
+    match target {
+        Some(value) => Some(String::from(value.trim_end())),
+        None => None,
     }
 }
 
