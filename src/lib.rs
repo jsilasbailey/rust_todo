@@ -17,6 +17,9 @@ pub struct Config {
     target: String,
 }
 
+const TODO_TXT_FILENAME: &str = "todo.txt";
+const DONE_TXT_FILENAME: &str = "done.txt";
+
 impl Config {
     pub fn from_args(mut args: env::Args) -> Result<Config, &'static str> {
         args.next();
@@ -43,11 +46,11 @@ impl Config {
             }
             Command::ListTodos => Ok(Config {
                 command,
-                target: String::from("todo.txt"),
+                target: String::from(TODO_TXT_FILENAME),
             }),
             Command::ListAllTodos => Ok(Config {
                 command,
-                target: String::from("todo.txt"),
+                target: String::from(TODO_TXT_FILENAME),
             }),
             Command::Unsupported => Ok(Config {
                 command,
@@ -102,7 +105,7 @@ fn create_todo(todo: &str) -> Result<(), std::io::Error> {
     let mut file = OpenOptions::new()
         .create(true)
         .append(true)
-        .open("todo.txt")?;
+        .open(TODO_TXT_FILENAME)?;
 
     writeln!(file, "{}", todo)?;
 
@@ -110,7 +113,7 @@ fn create_todo(todo: &str) -> Result<(), std::io::Error> {
 }
 
 fn list_todos() -> Result<(), std::io::Error> {
-    let file = OpenOptions::new().read(true).open("todo.txt");
+    let file = OpenOptions::new().read(true).open(TODO_TXT_FILENAME);
 
     match file {
         Ok(handle) => {
@@ -131,7 +134,7 @@ fn list_todos() -> Result<(), std::io::Error> {
 }
 
 fn list_done_todos() -> Result<(), std::io::Error> {
-    let file = OpenOptions::new().read(true).open("done.txt");
+    let file = OpenOptions::new().read(true).open(DONE_TXT_FILENAME);
 
     match file {
         Ok(handle) => {
@@ -152,15 +155,15 @@ fn list_done_todos() -> Result<(), std::io::Error> {
 }
 
 fn complete_todo(todo_number: usize) -> Result<(), std::io::Error> {
-    let todos = fs::read_to_string("todo.txt")?;
+    let todos = fs::read_to_string(TODO_TXT_FILENAME)?;
     let mut todos_file = OpenOptions::new()
         .write(true)
         .truncate(true)
-        .open("todo.txt")?;
+        .open(TODO_TXT_FILENAME)?;
     let mut done_file = OpenOptions::new()
         .create(true)
         .append(true)
-        .open("done.txt")?;
+        .open(DONE_TXT_FILENAME)?;
 
     for (index, line) in todos.lines().enumerate() {
         if (index + 1) == todo_number {
