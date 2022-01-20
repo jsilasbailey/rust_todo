@@ -62,12 +62,16 @@ impl Config {
 
 pub fn run(config: Config) -> Result<(), String> {
     match config.command {
-        Command::CreateTodo => create_todo(&config.target).or_else(handle_io_err),
+        Command::CreateTodo => create_todo(&config.target)
+            .or_else(handle_io_err)
+            .and(list_todos().or_else(handle_io_err)),
         Command::DoTodo => {
             let parse_result = config.target.parse::<usize>();
 
             match parse_result {
-                Ok(todo_number) => complete_todo(todo_number).or_else(handle_io_err),
+                Ok(todo_number) => complete_todo(todo_number)
+                    .or_else(handle_io_err)
+                    .and(list_todos().or_else(handle_io_err)),
                 Err(_) => Err(format!("Could not find todo number {}!", config.target)),
             }
         }
