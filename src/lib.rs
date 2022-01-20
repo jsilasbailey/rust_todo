@@ -81,13 +81,14 @@ pub fn run(config: Config) -> Result<(), String> {
 }
 
 fn parse_remaining_args(args: env::Args) -> Option<String> {
-    let target = args.reduce(|mut accum, word| {
-        accum.push_str(&format!("{} ", &word));
+    let todo = args.reduce(|mut accum, word| {
+        let next_word = &format!(" {}", word);
+        accum.push_str(next_word);
         accum
     });
 
-    match target {
-        Some(value) => Some(String::from(value.trim_end())),
+    match todo {
+        Some(value) => Some(String::from(value.trim())),
         None => None,
     }
 }
