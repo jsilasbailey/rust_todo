@@ -46,7 +46,7 @@ impl Config {
             }
             Command::ListTodos => Ok(Config {
                 command,
-                target: String::from(TODO_TXT_FILENAME),
+                target: parse_remaining_args(args).unwrap_or_default(),
             }),
             Command::ListAllTodos => Ok(Config {
                 command,
@@ -75,7 +75,13 @@ pub fn run(config: Config) -> Result<(), String> {
                 Err(_) => Err(format!("Could not find todo number {}!", config.target)),
             }
         }
-        Command::ListTodos => list_todos().or_else(handle_io_err),
+        Command::ListTodos => {
+            if config.target.is_empty() {
+                list_todos().or_else(handle_io_err)
+            } else {
+                search_todos(&config.target).or_else(handle_io_err)
+            }
+        }
         Command::ListAllTodos => match list_todos().or_else(handle_io_err) {
             Ok(_) => list_done_todos().or_else(handle_io_err),
             Err(err) => Err(err),
@@ -117,14 +123,51 @@ fn create_todo(todo: &str) -> Result<(), std::io::Error> {
     Ok(())
 }
 
-fn list_todos() -> Result<(), std::io::Error> {
+fn search_todos(search: &str) -> Result<(), std::io::Error> {
     let file = OpenOptions::new().read(true).open(TODO_TXT_FILENAME);
+    let mut number_of_todos = 0;
+    let mut shown_todos = 0;
 
     match file {
         Ok(handle) => {
             for (index, line) in BufReader::new(handle).lines().enumerate() {
+                number_of_todos = index + 1;
+                let todo: &str = &line.unwrap();
+
+                if todo.contains(search) {
+                    println!("{} {}", index + 1, todo);
+                    shown_todos = shown_todos + 1;
+                }
+            }
+
+            println!();
+            println!("Showing {} of {} todos.", shown_todos, number_of_todos);
+
+            Ok(())
+        }
+        Err(err) => {
+            if err.kind() == ErrorKind::NotFound {
+                Ok(()) // None to list
+            } else {
+                Err(err)
+            }
+        }
+    }
+}
+
+fn list_todos() -> Result<(), std::io::Error> {
+    let file = OpenOptions::new().read(true).open(TODO_TXT_FILENAME);
+    let mut number_of_todos = 0;
+
+    match file {
+        Ok(handle) => {
+            for (index, line) in BufReader::new(handle).lines().enumerate() {
+                number_of_todos = index + 1;
                 println!("{} {}", index + 1, line.unwrap());
             }
+
+            println!();
+            println!("Showing {} of {} todos.", number_of_todos, number_of_todos);
 
             Ok(())
         }
