@@ -5,83 +5,54 @@ use std::io::prelude::*;
 use std::io::{BufReader, ErrorKind};
 
 pub enum Command {
-    CreateTodo,
-    DoTodo,
-    ListTodos,
+    CreateTodo(String),
+    DoTodo(usize),
+    ListTodos(Option<String>),
     ListAllTodos,
     Unsupported,
-}
-
-pub struct Config {
-    command: Command,
-    target: String,
 }
 
 const TODO_TXT_FILENAME: &str = "todo.txt";
 const DONE_TXT_FILENAME: &str = "done.txt";
 
-impl Config {
-    pub fn from_args(mut args: env::Args) -> Result<Config, &'static str> {
+impl Command {
+    pub fn from_args(mut args: env::Args) -> Result<Command, String> {
         args.next();
 
         let command = args.next().ok_or("Please specify a command!")?;
-        let command = match command.as_str() {
-            "a" => Command::CreateTodo,
-            "add" => Command::CreateTodo,
-            "do" => Command::DoTodo,
-            "ls" => Command::ListTodos,
-            "list" => Command::ListTodos,
-            "listall" => Command::ListAllTodos,
-            _ => Command::Unsupported,
-        };
 
-        match command {
-            Command::CreateTodo => Ok(Config {
-                command,
-                target: parse_remaining_args(args).ok_or("Please specify text for a todo!")?,
-            }),
-            Command::DoTodo => {
-                let target = args.next().ok_or("Please specify a target!")?;
-                Ok(Config { command, target })
+        return match command.as_str() {
+            "a" | "add" => {
+                let todo = parse_remaining_args(args).ok_or("Please specify text for a todo!")?;
+                Ok(Command::CreateTodo(todo))
             }
-            Command::ListTodos => Ok(Config {
-                command,
-                target: parse_remaining_args(args).unwrap_or_default(),
-            }),
-            Command::ListAllTodos => Ok(Config {
-                command,
-                target: String::from(TODO_TXT_FILENAME),
-            }),
-            Command::Unsupported => Ok(Config {
-                command,
-                target: String::from(""),
-            }),
-        }
+            "do" => {
+                let target = args.next().ok_or("Please specify a todo number!")?;
+                let parse_result = target.parse::<usize>();
+                return match parse_result {
+                    Ok(todo_number) => Ok(Command::DoTodo(todo_number)),
+                    Err(_) => Err(format!("Could not find todo number {}!", &target)),
+                };
+            }
+            "ls" | "list" => Ok(Command::ListTodos(parse_remaining_args(args))),
+            "listall" => Ok(Command::ListAllTodos),
+            _ => Ok(Command::Unsupported),
+        };
     }
 }
 
-pub fn run(config: Config) -> Result<(), String> {
-    match config.command {
-        Command::CreateTodo => create_todo(&config.target)
+pub fn run(command: Command) -> Result<(), String> {
+    match command {
+        Command::CreateTodo(todo) => create_todo(&todo)
             .or_else(handle_io_err)
             .and(list_todos().or_else(handle_io_err)),
-        Command::DoTodo => {
-            let parse_result = config.target.parse::<usize>();
-
-            match parse_result {
-                Ok(todo_number) => complete_todo(todo_number)
-                    .or_else(handle_io_err)
-                    .and(list_todos().or_else(handle_io_err)),
-                Err(_) => Err(format!("Could not find todo number {}!", config.target)),
-            }
-        }
-        Command::ListTodos => {
-            if config.target.is_empty() {
-                list_todos().or_else(handle_io_err)
-            } else {
-                search_todos(&config.target).or_else(handle_io_err)
-            }
-        }
+        Command::DoTodo(todo_number) => complete_todo(todo_number)
+            .or_else(handle_io_err)
+            .and(list_todos().or_else(handle_io_err)),
+        Command::ListTodos(search) => match search {
+            Some(term) => search_todos(&term).or_else(handle_io_err),
+            None => list_todos().or_else(handle_io_err),
+        },
         Command::ListAllTodos => match list_todos().or_else(handle_io_err) {
             Ok(_) => list_done_todos().or_else(handle_io_err),
             Err(err) => Err(err),
