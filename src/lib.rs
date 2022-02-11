@@ -12,9 +12,6 @@ pub enum Command {
     Unsupported,
 }
 
-const TODO_TXT_FILENAME: &str = "todo.txt";
-const DONE_TXT_FILENAME: &str = "done.txt";
-
 impl Command {
     pub fn from_args(mut args: env::Args) -> Result<Command, String> {
         args.next();
@@ -41,20 +38,34 @@ impl Command {
     }
 }
 
-pub fn run(command: Command) -> Result<(), String> {
+pub struct Config {
+    todo_path: String,
+    done_path: String,
+}
+
+impl Config {
+    pub fn new(todo_path: &str, done_path: &str) -> Config {
+        Config {
+            todo_path: String::from(todo_path),
+            done_path: String::from(done_path),
+        }
+    }
+}
+
+pub fn run(command: Command, config: Config) -> Result<(), String> {
     match command {
-        Command::CreateTodo(todo) => create_todo(&todo)
+        Command::CreateTodo(todo) => create_todo(&todo, &config)
             .or_else(handle_io_err)
-            .and(list_todos().or_else(handle_io_err)),
-        Command::DoTodo(todo_number) => complete_todo(todo_number)
+            .and(list_todos(&config).or_else(handle_io_err)),
+        Command::DoTodo(todo_number) => complete_todo(todo_number, &config)
             .or_else(handle_io_err)
-            .and(list_todos().or_else(handle_io_err)),
+            .and(list_todos(&config).or_else(handle_io_err)),
         Command::ListTodos(search) => match search {
-            Some(term) => search_todos(&term).or_else(handle_io_err),
-            None => list_todos().or_else(handle_io_err),
+            Some(term) => search_todos(&term, &config).or_else(handle_io_err),
+            None => list_todos(&config).or_else(handle_io_err),
         },
-        Command::ListAllTodos => match list_todos().or_else(handle_io_err) {
-            Ok(_) => list_done_todos().or_else(handle_io_err),
+        Command::ListAllTodos => match list_todos(&config).or_else(handle_io_err) {
+            Ok(_) => list_done_todos(&config).or_else(handle_io_err),
             Err(err) => Err(err),
         },
         Command::Unsupported => Err(String::from("Unsupported command!")),
@@ -83,19 +94,19 @@ fn handle_io_err(err: std::io::Error) -> Result<(), String> {
     }
 }
 
-fn create_todo(todo: &str) -> Result<(), std::io::Error> {
+fn create_todo(todo: &str, config: &Config) -> Result<(), std::io::Error> {
     let mut file = OpenOptions::new()
         .create(true)
         .append(true)
-        .open(TODO_TXT_FILENAME)?;
+        .open(&config.todo_path)?;
 
     writeln!(file, "{}", todo)?;
 
     Ok(())
 }
 
-fn search_todos(search: &str) -> Result<(), std::io::Error> {
-    let file = OpenOptions::new().read(true).open(TODO_TXT_FILENAME);
+fn search_todos(search: &str, config: &Config) -> Result<(), std::io::Error> {
+    let file = OpenOptions::new().read(true).open(&config.todo_path);
     let mut number_of_todos = 0;
     let mut shown_todos = 0;
 
@@ -126,8 +137,8 @@ fn search_todos(search: &str) -> Result<(), std::io::Error> {
     }
 }
 
-fn list_todos() -> Result<(), std::io::Error> {
-    let file = OpenOptions::new().read(true).open(TODO_TXT_FILENAME);
+fn list_todos(config: &Config) -> Result<(), std::io::Error> {
+    let file = OpenOptions::new().read(true).open(&config.todo_path);
     let mut number_of_todos = 0;
 
     match file {
@@ -152,8 +163,8 @@ fn list_todos() -> Result<(), std::io::Error> {
     }
 }
 
-fn list_done_todos() -> Result<(), std::io::Error> {
-    let file = OpenOptions::new().read(true).open(DONE_TXT_FILENAME);
+fn list_done_todos(config: &Config) -> Result<(), std::io::Error> {
+    let file = OpenOptions::new().read(true).open(&config.done_path);
 
     match file {
         Ok(handle) => {
@@ -173,16 +184,16 @@ fn list_done_todos() -> Result<(), std::io::Error> {
     }
 }
 
-fn complete_todo(todo_number: usize) -> Result<(), std::io::Error> {
-    let todos = fs::read_to_string(TODO_TXT_FILENAME)?;
+fn complete_todo(todo_number: usize, config: &Config) -> Result<(), std::io::Error> {
+    let todos = fs::read_to_string(&config.todo_path)?;
     let mut todos_file = OpenOptions::new()
         .write(true)
         .truncate(true)
-        .open(TODO_TXT_FILENAME)?;
+        .open(&config.todo_path)?;
     let mut done_file = OpenOptions::new()
         .create(true)
         .append(true)
-        .open(DONE_TXT_FILENAME)?;
+        .open(&config.done_path)?;
 
     for (index, line) in todos.lines().enumerate() {
         if (index + 1) == todo_number {
