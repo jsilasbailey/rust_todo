@@ -35,7 +35,7 @@ impl Command {
                 };
             }
             "ls" | "list" => Ok(Command::ListTodos(parse_remaining_args(args))),
-            "listall" => Ok(Command::ListAllTodos),
+            "la" | "listall" => Ok(Command::ListAllTodos),
             _ => Ok(Command::Unsupported),
         };
     }
